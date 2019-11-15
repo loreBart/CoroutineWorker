@@ -7,6 +7,8 @@ import kotlinx.coroutines.*
 
 
 /**
+ * Class used for task execution using coroutine
+ *
  * Experimental !!!!!!!!!!!!!!
  *
  * Some funny on coroutine
@@ -67,16 +69,19 @@ class Worker {
     }
 
     private val works: MutableMap<WorkId, WorkInterface<*> > = mutableMapOf()
-    private val workerScope = CoroutineScope(Dispatchers.IO + SupervisorJob(Job()))
+    private val workerScope = CoroutineScope(Dispatchers.IO + SupervisorJob(Job())) + CoroutineName("HelloCoroutine")
     // ---------------------------------------------------------------------------------------------
 
 
     /**
-     * Execute a work in background and notify the callback of the result
+     * Execute a work in background and notify the callback of the result.
+     * If some error occur during the work execution the failure callback
+     * is called passing the error cause as parameter (if any)
      *
-     * @return Job
+     * @return The work identifier
      * @Experimental
      */
+
     fun <R> exec(args: Bundle, work: Work<R>, callback: Callback<R>) : WorkId {
         val workId = WorkId()
         val jobWrap = scheduleWork(workId, args, work, callback)
@@ -114,7 +119,7 @@ class Worker {
         if (work != null && work.job().status() != WorkStatus.CANCELLED) {
             workStatus = work.job().status()
             work.cancel()
-            work.job().cancel("Cancelled by user")
+            work.job().cancel("Work $workId cancelled by user")
         }
         removeWork(workId, workStatus)
     }
@@ -126,12 +131,14 @@ class Worker {
         }
         workerScope.cancel("cancelAll")
     }
+    // ---------------------------------------------------------------------------------------------
+
 
     // =============================================================================================
     //  internal implementation
     // ---------------------------------------------------------------------------------------------
     private fun <R> scheduleWork(workId: WorkId, args: Bundle, work: Work<R>, callback: Callback<R>): JobWrap {
-        val job = workerScope.async(workerHandler) {
+        val job = workerScope.forWork(workId).async(workerHandler) {
             doWork(workId, args, work, callback)
         }
         return JobWrap(workId, job)
@@ -160,15 +167,16 @@ class Worker {
         var t   : Throwable? = null
         try {
             res =  work.doWork(args)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             d("doWork", e)
             t = e
         }
         if (res != null) { callback.onComplete(workId.success(res)) }
         else             { callback.onFailure(workId.failure(t))    }
     }
-    // ---------------------------------------------------------------------------------------------
 
+    private fun CoroutineScope.forWork(workId : WorkId) = this + CoroutineName(workId.id())
+    // ---------------------------------------------------------------------------------------------
 
 }
 

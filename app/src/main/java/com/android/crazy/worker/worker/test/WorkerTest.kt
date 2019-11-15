@@ -128,6 +128,7 @@ class WorkerTest(val context: Context) {
             d("|---> work 5 $id5 scheduled in ${t5 - t4} millis")
             val idDel1 = worker.exec(Bundle(), {
                 delay(5000)
+                d("|---> Cancelling work 5")
                 worker.cancel(id5)
             }, {}, {})
             // -----------------------------------------------------------------------
@@ -157,13 +158,13 @@ class WorkerTest(val context: Context) {
                 val jsonPlat = readAsset(assetManager, path)
                 jsonPlat
             }, {
-                d("onSuccess<6> id -> ${it.workId} ret -> ${it.res}")
+                d("onSuccess<7> id -> ${it.workId} ret -> ${it.res}")
             }, {
-                d("onFailure<6> id -> ${it?.workId} ret -> ${it?.cause}")
+                d("onFailure<7> id -> ${it?.workId} ret -> ${it?.cause}")
             })
             d("|---> work 7 $id7 scheduled in ${t7 - t6} millis")
             // -----------------------------------------------------------------------
-            //  Work 7
+            //  Work 8
             // -----------------------------------------------------------------------
             val t8 = SystemClock.elapsedRealtime()
             val id8 = worker.exec(args6, {
@@ -172,9 +173,9 @@ class WorkerTest(val context: Context) {
                 val jsonPlat = readAsset(assetManager, path)
                 jsonPlat
             }, {
-                d("onSuccess<6> id -> ${it.workId} ret -> ${it.res}")
+                d("onSuccess<8> id -> ${it.workId} ret -> ${it.res}")
             }, {
-                d("onFailure<6> id -> ${it?.workId} ret -> ${it?.cause}")
+                d("onFailure<8> id -> ${it?.workId} ret -> ${it?.cause}")
             })
             d("|---> work 8 $id8 scheduled in ${t8 - t7} millis")
 
@@ -184,6 +185,7 @@ class WorkerTest(val context: Context) {
     }
 
 
+    // =============================================================================================
     private fun readAsset(mgr: AssetManager, path: String): String {
         var contents = ""
         var `is`: InputStream? = null
@@ -209,5 +211,6 @@ class WorkerTest(val context: Context) {
         }
         return contents
     }
+    // ---------------------------------------------------------------------------------------------
 
 }
