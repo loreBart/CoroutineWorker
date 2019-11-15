@@ -17,4 +17,15 @@ Example of use:
               // it.workId -> the work id
               // it.cause  -> the error cause
             })
+            
+Another way to use: extending the lamda work function
+
+            var work2: WorkFun<String> =  {
+                 return someString
+            }
+            val id2 = worker.exec(Bundle(), work2, {
+                // onSuccess
+            }, {
+                // onFailure
+            })
 
