@@ -1,0 +1,120 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'kotlinx-serialization'
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion "29.0.2"
+    defaultConfig {
+        applicationId "com.android.crazy.worker"
+        minSdkVersion 21
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+
+    // ------
+    // Kotlin Android core
+    implementation 'androidx.core:core-ktx:1.2.0-beta01'
+    // ------
+    // Kotlin serialization
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.11.1"
+    // ------
+    // Kotlin Coroutine
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0-RC"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.0-RC"
+    // ------
+    // Kotlin reflection
+    implementation 'org.jetbrains.kotlin:kotlin-reflect:1.3.50'
+    // optional - Kotlin Extensions and Coroutines support for Room
+    // ------
+    // App Compat
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    // ------
+    // Fragment
+    implementation 'androidx.fragment:fragment-ktx:1.2.0-rc01'
+
+    // ------
+    // Navigation
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.1.0'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.1.0'
+    // ------
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.1.0-rc01'
+    // Ok Http
+    implementation 'com.squareup.okhttp3:okhttp:4.2.2'
+    // ------
+    // Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.6.2'
+    // ------
+    // Retrofit JSON Converter
+    implementation 'com.squareup.retrofit2:converter-gson:2.6.2'
+    // ------
+    // Log interceptor
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.2.2'
+    // ------
+    // Volley
+    implementation 'com.android.volley:volley:1.1.1'
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // ------
+    // Card View
+    implementation 'androidx.cardview:cardview:1.0.0'
+    // ------
+    // Material design
+    implementation 'com.google.android.material:material:1.2.0-alpha01'
+    // ------
+    // Lifecycle, ViewModel and LiveData
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0-rc01'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-savedstate:1.0.0-rc01'
+    kapt 'androidx.lifecycle:lifecycle-compiler:2.2.0-rc01'
+    // ------
+    // Glide
+    implementation 'com.github.bumptech.glide:glide:4.10.0'
+    // ------
+    // Work
+    implementation 'androidx.work:work-runtime-ktx:2.2.0'
+    // ------
+    // Maps
+    implementation 'com.google.android.gms:play-services-maps:17.0.0'
+    implementation 'com.google.android.gms:play-services-places:17.0.0'
+    implementation 'com.google.maps.android:android-maps-utils:0.6.2'
+    // ------
+    // Paging
+    implementation 'androidx.paging:paging-runtime-ktx:2.1.0'
+    // ------
+    // Lottie
+    implementation 'com.airbnb.android:lottie:3.1.0'
+    // ------
+    // Gson
+    implementation 'com.google.code.gson:gson:2.8.6'
+    // ------
+    // Android Tv
+    implementation 'androidx.leanback:leanback:1.0.0'
+    implementation 'androidx.recommendation:recommendation:1.0.0'
+    implementation 'androidx.leanback:leanback-preference:1.0.0'
+    implementation 'androidx.annotation:annotation:1.1.0'
+    // ------
+    // Android Tv Exoplayer
+    implementation 'com.google.android.exoplayer:exoplayer:2.6.1'
+    implementation 'com.google.android.exoplayer:extension-leanback:2.6.1'
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.6.1'
+    implementation 'com.google.android.exoplayer:exoplayer-hls:2.6.1'
+
+    // Koin for Android
+    implementation 'org.koin:koin-core:2.0.1'
+    // -------------------------------------------------------------------------------------
+    testImplementation 'junit:junit:4.13-rc-1'
+    androidTestImplementation 'androidx.test:runner:1.3.0-alpha02'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0-alpha02'
+}
