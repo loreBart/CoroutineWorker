@@ -13,6 +13,7 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import android.content.res.AssetManager
+import com.android.crazy.worker.worker.Work
 import kotlinx.serialization.json.json
 import java.io.IOException
 
@@ -179,6 +180,13 @@ class WorkerTest(val context: Context) {
             })
             d("|---> work 8 $id8 scheduled in ${t8 - t7} millis")
 
+
+            class HeavyWork : Work<String> {
+                override suspend fun doWork(args: Bundle): String {
+                    return ""
+                }
+                override fun cancel() {}
+            }
         }
         d("===================== TEST FINISHED ====================")
         d("========================================================")

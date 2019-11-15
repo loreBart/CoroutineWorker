@@ -1,6 +1,8 @@
 package com.android.crazy.worker.worker
 
-
+/**
+ * Enum used to wrap Job state
+ */
 enum class WorkStatus {
     UNKNOWN,
     ACTIVE,
