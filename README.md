@@ -3,7 +3,7 @@
 Simple Android minimalist framework to write background task
 using coroutine.
 
-Written in Kotlin just for fun.
+Written in Kotlin just for fun. Any constructive criticism and / or appreciation is welcome.
 
 Example of use:
 
