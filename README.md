@@ -19,7 +19,7 @@ Example of use:
             })
 
 
-Another way to use: extending the lamda work function
+Another way to use: extending the lamda work function:
 
 
             var work2: WorkFun<String> =  {
@@ -32,7 +32,9 @@ Another way to use: extending the lamda work function
             })
 
 
-Another way is extend the Work class 
+
+Another way is extend the Work class:
+
 
             class HeavyWork : Work<JSONObject> {
                 override suspend fun doWork(args: Bundle): JSONObject {
@@ -46,4 +48,5 @@ Another way is extend the Work class
             }, {
                 // onFailure
             })
+
 
