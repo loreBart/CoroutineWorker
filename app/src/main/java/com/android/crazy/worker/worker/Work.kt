@@ -13,6 +13,7 @@ typealias WorkFun<r> = suspend (args: Bundle) -> r
 /**
  * A work is an interface that defines a
  * background execution task.
+ *
  * A [Bundle] is passed as parameter
  * and a generic type [r]
  */

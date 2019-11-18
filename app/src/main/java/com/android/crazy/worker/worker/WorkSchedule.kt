@@ -15,6 +15,6 @@ interface WorkSchedule<r> : Work<r> {
     /**
      * The scheduled [Deferred] reference
      */
-    fun job() : Deferred<r>
+    fun workAsync() : Deferred<r>
 }
 // ---------------------------------------------------------------------------------------------

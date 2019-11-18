@@ -13,6 +13,7 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import android.content.res.AssetManager
+import android.os.Handler
 import com.android.crazy.worker.worker.Work
 import kotlinx.serialization.json.json
 import java.io.IOException
@@ -27,6 +28,9 @@ class WorkerTest(val context: Context) {
         d("========================================================")
         d("===================== TEST STARTED =====================")
         runBlocking {
+            /*
+            worker.cancelAll()
+
             val args = Bundle()
             args.putInt("repeat_count", 10)
             val t0 = SystemClock.elapsedRealtime()
@@ -179,18 +183,61 @@ class WorkerTest(val context: Context) {
                 d("onFailure<8> id -> ${it?.workId} ret -> ${it?.cause}")
             })
             d("|---> work 8 $id8 scheduled in ${t8 - t7} millis")
+            // -----------------------------------------------------------------------
+            //  Work 9
+            // -----------------------------------------------------------------------
+            Handler().postDelayed({
+                worker.cancelAll()
+                d("===> BEFORE CANCELL All ...")
+            }, 3000)
 
-
-            class HeavyWork : Work<String> {
-                override suspend fun doWork(args: Bundle): String {
-                    return ""
+            Handler().postDelayed({
+                d("===> BEFORE CANCELL All ...")
+                worker.exec(Bundle(), {
+                    for (i in 0..9) {
+                        delay((50 * i).toLong())
+                    }
+                    "Lorenzo is suffering"
+                }, {
+                    d("onSuccess<9> id -> ${it.workId} ret -> ${it.res}")
+                })
+            }, 5000)
+            */
+            val id1 = worker.exec(Bundle(), {
+                for (i in 0..10) {
+                    delay((300 * i).toLong())
+                    d("Work 1 after sleep for ${(300 * i)} millis ...")
                 }
-                override fun cancel() {}
-            }
+                "Lorenzo@1"
+            }, {
+                d("onSuccess<1> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
+            }, {
+                d("onFailure<1> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
+            })
+            val idDel1 = worker.exec(Bundle(), {
+                delay((2000).toLong())
+                worker.cancel(id1)
+            }, {
+                d("onSuccess<Work Del 1> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
+
+            }, {
+                d("onFailure<Work Del 1> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
+            })
+            val id2 = worker.exec(Bundle(), {
+                for (i in 0..10) {
+                    delay((200 * i).toLong())
+                    d("Work 2 after sleep for ${(300 * i)} millis ...")
+                }
+                "Lorenzo@2"
+            }, {
+                d("onSuccess<2> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
+            }, {
+                d("onFailure<2> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
+            })
 
 
         }
-        d("===================== TEST FINISHED ====================")
+        d("===================== TEST LAUNCHED ====================")
         d("========================================================")
     }
 

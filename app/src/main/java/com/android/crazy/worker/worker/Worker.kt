@@ -4,6 +4,7 @@ package com.android.crazy.worker.worker
 import android.os.Bundle
 import com.android.crazy.worker.util.log.d
 import kotlinx.coroutines.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 /**
@@ -16,16 +17,16 @@ import kotlinx.coroutines.*
 class Worker {
 
 
-    // /////////////////////////////////////////////////////////////////////////////////////////////
-    //  JobWrapper
-    // =============================================================================================
+    /**
+     * An object that wrap a [WorkFun]
+     */
     data class JobWrapper<r>(val workId: WorkId, val job: Deferred<r>)
     // ---------------------------------------------------------------------------------------------
 
 
-    // /////////////////////////////////////////////////////////////////////////////////////////////
-    //  WorkFunObject
-    // =============================================================================================
+    /**
+     * An object that wrap a [WorkFun]
+     */
     internal class WorkFunObject<r>(private val workFun: WorkFun<r>): Work<r> {
         override suspend fun doWork(args: Bundle): r = workFun.invoke(args)
         override fun cancel() { }
@@ -38,7 +39,7 @@ class Worker {
     internal class WorkWrap<r>(private val jobWrap: JobWrapper<r>, private val workWrap: Work<r>) : WorkSchedule<r>  {
         // Return the id
         override fun id() : WorkId = jobWrap.workId
-        override fun job() : Deferred<r> = jobWrap.job
+        override fun workAsync() : Deferred<r> = jobWrap.job
 
         override suspend fun doWork(args: Bundle): r = workWrap.doWork(args)
 
@@ -60,7 +61,7 @@ class Worker {
         println("WorkerHandler Caught $exception")
     }
 
-    private val works: MutableMap<WorkId, WorkSchedule<*> > = mutableMapOf()
+    private val works: ConcurrentHashMap<WorkId, WorkSchedule<*> > = ConcurrentHashMap()
     private val workerScope = CoroutineScope(Dispatchers.IO + SupervisorJob(Job())) + CoroutineName("HelloCoroutine")
     // ---------------------------------------------------------------------------------------------
 
@@ -68,7 +69,9 @@ class Worker {
     /**
      * Execute a work in background and notify the callback of the result.
      * If some error occur during the work execution the failure callback
-     * is called passing the error cause as parameter (if any)
+     * is called passing the error cause as parameter (if any).
+     *
+     * If
      *
      * @return The work identifier
      * @Experimental
@@ -76,9 +79,18 @@ class Worker {
 
     fun <r> exec(args: Bundle, work: Work<r>, callback: Callback<r>) : WorkId {
         val workId = WorkId()
-        workerScope.launch {
-            val jobWrap = scheduleWork(workId, args, work)
-            waitWork(jobWrap, work, callback)
+        if (!workerScope.isActive) {
+            d("exec: worker not yet active")
+            return WorkId.NULL
+        }
+        try {
+            workerScope.ensureActive()
+            workerScope.launch {
+                val jobWrap = scheduleWork(workId, args, work)
+                waitWork(jobWrap, work, callback)
+            }
+        } catch (e: Throwable) {
+            d("exec $e")
         }
         return workId
     }
@@ -112,7 +124,7 @@ class Worker {
 
     fun <r> than(workId : WorkId, args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>) {
         val scheduled = scheduled(workId)
-        val job = scheduled?.job()
+        val job = scheduled?.workAsync()
         if (job != null) {
         }
     }
@@ -131,27 +143,32 @@ class Worker {
 
 
     /**
-     * Cancel a previous scheduled work, if any
+     * Cancel a previous scheduled work, if any, passing
+     * [WorkId] as parameter
+     *
      * @Experimental
      */
     fun cancel(workId: WorkId) {
-        d("cancel: workId -> ${workId.id()}")
         val work = works[workId]
         var workStatus = WorkStatus.UNKNOWN
-        if (work != null && work.job().status() != WorkStatus.CANCELLED) {
-            workStatus = work.job().status()
+        if (work != null && work.workAsync().status() != WorkStatus.CANCELLED) {
+            workStatus = work.workAsync().status()
             work.cancel()
-            work.job().cancel("Work $workId cancelled by user")
+            work.workAsync().cancel("Work $workId cancelled by user")
         }
         removeWork(workId, workStatus)
     }
 
     fun cancelAll() {
-        d("cancelAll")
+        // Cancel every work previously scheduled
         for (work in works) {
             cancel(work.key)
         }
-        workerScope.cancel("cancelAll")
+        try {
+            workerScope.cancel("cancelAll called")
+        } catch (e:Throwable) {
+            d("cancelAll $e")
+        }
     }
     // ---------------------------------------------------------------------------------------------
 
@@ -177,8 +194,19 @@ class Worker {
         } catch (e: Throwable) {
             t = e
         }
-        if (res != null) { callback.onComplete(job.workId.success(res)) }
-        else             { callback.onFailure(job.workId.failure(t))    }
+        d("waitWork thread ${Thread.currentThread()}")
+
+        if (res != null) {
+            workerScope.launch(Dispatchers.Main) {
+                callback.onComplete(job.workId.success(res))
+            }
+        } else {
+            workerScope.launch(Dispatchers.Main) {
+                callback.onFailure(job.workId.failure(t))
+            }
+        }
+        // Now that we have done remove the work from the work list
+        removeWork(job.workId, job.job.status())
     }
 
     private fun removeWork(workId: WorkId, workStatus: WorkStatus) {
@@ -186,13 +214,12 @@ class Worker {
         message += when (works.contains(workId)) {
             true  -> {
                 works.remove(workId)
-                " cancelled"
+                " removed from work list"
             }
-            false -> " can't be removed (Already removed?)"
+            false -> { " can't be removed (Already removed?)" }
         }
         d(message)
     }
-
 
     private fun CoroutineScope.forWork(workId : WorkId) = this + CoroutineName(workId.id())
     // ---------------------------------------------------------------------------------------------
