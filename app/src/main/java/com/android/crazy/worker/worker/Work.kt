@@ -4,23 +4,25 @@ import android.os.Bundle
 
 
 /**
- * Lambda function that take a Bundle
- * as parameter and return a generic
+ * Lambda suspend function that take a [Bundle]
+ * as parameter and return a generic type [r]
  */
-typealias WorkFun<R> = suspend (args: Bundle) -> R
+typealias WorkFun<r> = suspend (args: Bundle) -> r
 
 
 /**
- * A work is an abstract class
- * that defines a
+ * A work is an interface that defines a
+ * background execution task.
+ * A [Bundle] is passed as parameter
+ * and a generic type [r]
  */
-interface Work<R> {
+interface Work<r> {
     /**
-     * Interface used to exec a work in background
+     * Function used to execute a background work
      *
-     * @return The result value of type R
+     * @return The result value of type r
      */
-    suspend fun doWork(args: Bundle): R
+    suspend fun doWork(args: Bundle): r
     /**
      * This function is called by the the framework
      * to notify the work that the cancel signal has been

@@ -1,7 +1,7 @@
 package com.android.crazy.worker.worker
 
 /**
- * Enum used to wrap Job state
+ * Enum used to wrap the internal [kotlinx.coroutines.Job] state
  */
 enum class WorkStatus {
     UNKNOWN,

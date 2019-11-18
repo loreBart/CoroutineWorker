@@ -3,7 +3,7 @@ package com.android.crazy.worker.worker
 import java.util.*
 
 /**
- * A class used to identify a work
+ * A class used for @see Work
  */
 data class WorkId(private val _id: UUID = UUID.randomUUID()) {
     /**

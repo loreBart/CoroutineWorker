@@ -17,25 +17,17 @@ class Worker {
 
 
     // /////////////////////////////////////////////////////////////////////////////////////////////
-    //  JobWrap
+    //  JobWrapper
     // =============================================================================================
-    data class JobWrap(val workId: WorkId, val job: Job)
+    data class JobWrapper<r>(val workId: WorkId, val job: Deferred<r>)
     // ---------------------------------------------------------------------------------------------
 
-    // /////////////////////////////////////////////////////////////////////////////////////////////
-    //  WorkInterface
-    // =============================================================================================
-    interface WorkInterface<R> : Work<R> {
-        fun id() : WorkId
-        fun job() : Job
-    }
-    // ---------------------------------------------------------------------------------------------
 
     // /////////////////////////////////////////////////////////////////////////////////////////////
     //  WorkFunObject
     // =============================================================================================
-    internal class WorkFunObject<R>(private val workFun: WorkFun<R>): Work<R> {
-        override suspend fun doWork(args: Bundle): R = workFun.invoke(args)
+    internal class WorkFunObject<r>(private val workFun: WorkFun<r>): Work<r> {
+        override suspend fun doWork(args: Bundle): r = workFun.invoke(args)
         override fun cancel() { }
     }
     // ---------------------------------------------------------------------------------------------
@@ -43,12 +35,12 @@ class Worker {
     // /////////////////////////////////////////////////////////////////////////////////////////////
     //  WorkWrap
     // =============================================================================================
-    internal class WorkWrap<R>(private val jobWrap: JobWrap, private val workWrap: Work<R>) : WorkInterface<R>  {
+    internal class WorkWrap<r>(private val jobWrap: JobWrapper<r>, private val workWrap: Work<r>) : WorkSchedule<r>  {
         // Return the id
         override fun id() : WorkId = jobWrap.workId
-        override fun job() : Job = jobWrap.job
+        override fun job() : Deferred<r> = jobWrap.job
 
-        override suspend fun doWork(args: Bundle): R = workWrap.doWork(args)
+        override suspend fun doWork(args: Bundle): r = workWrap.doWork(args)
 
         override fun cancel() = workWrap.cancel()
 
@@ -68,7 +60,7 @@ class Worker {
         println("WorkerHandler Caught $exception")
     }
 
-    private val works: MutableMap<WorkId, WorkInterface<*> > = mutableMapOf()
+    private val works: MutableMap<WorkId, WorkSchedule<*> > = mutableMapOf()
     private val workerScope = CoroutineScope(Dispatchers.IO + SupervisorJob(Job())) + CoroutineName("HelloCoroutine")
     // ---------------------------------------------------------------------------------------------
 
@@ -82,31 +74,61 @@ class Worker {
      * @Experimental
      */
 
-    fun <R> exec(args: Bundle, work: Work<R>, callback: Callback<R>) : WorkId {
+    fun <r> exec(args: Bundle, work: Work<r>, callback: Callback<r>) : WorkId {
         val workId = WorkId()
-        val jobWrap = scheduleWork(workId, args, work, callback)
-        return addWork(jobWrap, work)
+        workerScope.launch {
+            val jobWrap = scheduleWork(workId, args, work)
+            waitWork(jobWrap, work, callback)
+        }
+        return workId
     }
 
-    fun <R> exec(args: Bundle, doWork: WorkFun<R>, callback: Callback<R>) : WorkId {
+    fun <r> exec(args: Bundle, doWork: WorkFun<r>, callback: Callback<r>) : WorkId {
         return exec(args, WorkFunObject(doWork), callback)
     }
 
-    fun <R> exec(args: Bundle, work: Work<R>, onSuccess: OnSuccess<R>) : WorkId {
+    fun <r> exec(args: Bundle, work: Work<r>, onSuccess: OnSuccess<r>) : WorkId {
         return exec(args, work, CallbackWrapper(onSuccess, null))
     }
 
-    fun <R> exec(args: Bundle, work: Work<R>, onSuccess: OnSuccess<R>, onFailure: OnFailure?) : WorkId {
+    fun <r> exec(args: Bundle, work: Work<r>, onSuccess: OnSuccess<r>, onFailure: OnFailure?) : WorkId {
         return exec(args, work, CallbackWrapper(onSuccess, onFailure))
     }
 
-    fun <R> exec(args: Bundle, doWork: WorkFun<R>, onSuccess: OnSuccess<R>) : WorkId {
+    fun <r> exec(args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>) : WorkId {
         return exec(args, WorkFunObject(doWork), CallbackWrapper(onSuccess, null))
     }
 
-    fun <R> exec(args: Bundle, doWork: WorkFun<R>, onSuccess: OnSuccess<R>, onFailure: OnFailure?) : WorkId {
+    fun <r> exec(args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>, onFailure: OnFailure?) : WorkId {
         return exec(args, WorkFunObject(doWork), CallbackWrapper(onSuccess, onFailure))
     }
+
+    /**
+     * Returns true if the work referred by the given key
+     * [WorkId] has been scheduled false otherwise
+     */
+    fun hasWork(workId : WorkId) : Boolean = works.contains(workId)
+
+
+    fun <r> than(workId : WorkId, args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>) {
+        val scheduled = scheduled(workId)
+        val job = scheduled?.job()
+        if (job != null) {
+        }
+    }
+
+
+    /**
+     * Returns the scheduled [WorkSchedule] corresponding to the given
+     * [WorkId], otherwise returns null
+     */
+    fun scheduled(workId : WorkId) : WorkSchedule<*>? = when(hasWork(workId)) {
+        true  -> works.getValue(workId)
+        false -> null
+    }
+
+    //fun hasWork(workId : WorkId) : Boolean = works.contains(workId)
+
 
     /**
      * Cancel a previous scheduled work, if any
@@ -137,21 +159,30 @@ class Worker {
     // =============================================================================================
     //  internal implementation
     // ---------------------------------------------------------------------------------------------
-    private fun <R> scheduleWork(workId: WorkId, args: Bundle, work: Work<R>, callback: Callback<R>): JobWrap {
-        val job = workerScope.forWork(workId).async(workerHandler) {
-            doWork(workId, args, work, callback)
+    private suspend fun <r> scheduleWork(workId: WorkId, args: Bundle, work: Work<r>): JobWrapper<r> {
+        val workScope = workerScope.forWork(workId)
+        val job : Deferred<r> = workScope.async(workerHandler) {
+            work.doWork(args)
         }
-        return JobWrap(workId, job)
+        return JobWrapper(workId, job)
     }
 
-    private fun <R> addWork(job: JobWrap, work: Work<R>) : WorkId {
+    private suspend fun <r> waitWork(job: JobWrapper<r>, work: Work<r>, callback: Callback<r>) {
         val wrapper = WorkWrap(job, work)
         works[wrapper.id()] = wrapper
-        return wrapper.id()
+        var res : r? = null
+        var t   : Throwable? = null
+        try {
+            res =  job.job.await()
+        } catch (e: Throwable) {
+            t = e
+        }
+        if (res != null) { callback.onComplete(job.workId.success(res)) }
+        else             { callback.onFailure(job.workId.failure(t))    }
     }
 
     private fun removeWork(workId: WorkId, workStatus: WorkStatus) {
-        var message = "cancel: work($workId) state $workStatus"
+        var message = "removeWork: work($workId) state $workStatus"
         message += when (works.contains(workId)) {
             true  -> {
                 works.remove(workId)
@@ -162,18 +193,6 @@ class Worker {
         d(message)
     }
 
-    private suspend fun <R> doWork(workId: WorkId, args: Bundle, work: Work<R>, callback: Callback<R>) {
-        var res : R? = null
-        var t   : Throwable? = null
-        try {
-            res =  work.doWork(args)
-        } catch (e: Throwable) {
-            d("doWork", e)
-            t = e
-        }
-        if (res != null) { callback.onComplete(workId.success(res)) }
-        else             { callback.onFailure(workId.failure(t))    }
-    }
 
     private fun CoroutineScope.forWork(workId : WorkId) = this + CoroutineName(workId.id())
     // ---------------------------------------------------------------------------------------------
