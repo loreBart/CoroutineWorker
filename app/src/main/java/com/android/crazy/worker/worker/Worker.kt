@@ -8,11 +8,15 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 /**
- * Class used for task execution using coroutine
+ *
+ * Class used for task execution using coroutine.
+ * Once the cancellAll method is called on an object,
+ * no exec calls are accepted
  *
  * Experimental !!!!!!!!!!!!!!
  *
  * Some funny on coroutine
+ *
  */
 class Worker {
 
@@ -123,10 +127,14 @@ class Worker {
 
 
     fun <r> than(workId : WorkId, args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>) {
-        val scheduled = scheduled(workId)
-        val job = scheduled?.workAsync()
-        if (job != null) {
+        d("than 111111111 $workId")
+        workerScope.launch {
+            val scheduled = scheduled(workId)
+            val job = scheduled?.workAsync()
+            job?.await()
         }
+        d("than 222222222 $workId")
+        exec(args, doWork, onSuccess)
     }
 
 
