@@ -28,7 +28,6 @@ class WorkerTest(val context: Context) {
         d("========================================================")
         d("===================== TEST STARTED =====================")
         runBlocking {
-            /*
             worker.cancelAll()
 
             val args = Bundle()
@@ -202,38 +201,6 @@ class WorkerTest(val context: Context) {
                     d("onSuccess<9> id -> ${it.workId} ret -> ${it.res}")
                 })
             }, 5000)
-            */
-            val id1 = worker.exec(Bundle(), {
-                for (i in 0..10) {
-                    delay((300 * i).toLong())
-                    d("Work 1 after sleep for ${(300 * i)} millis ...")
-                }
-                "Lorenzo@1"
-            }, {
-                d("onSuccess<1> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
-            }, {
-                d("onFailure<1> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
-            })
-            val idDel1 = worker.exec(Bundle(), {
-                delay((2000).toLong())
-                worker.cancel(id1)
-            }, {
-                d("onSuccess<Work Del 1> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
-
-            }, {
-                d("onFailure<Work Del 1> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
-            })
-            val id2 = worker.exec(Bundle(), {
-                for (i in 0..10) {
-                    delay((200 * i).toLong())
-                    d("Work 2 after sleep for ${(300 * i)} millis ...")
-                }
-                "Lorenzo@2"
-            }, {
-                d("onSuccess<2> ${Thread.currentThread().name} id -> ${it.workId} ret -> ${it.res}")
-            }, {
-                d("onFailure<2> ${Thread.currentThread().name} id -> ${it?.workId} ret -> ${it?.cause}")
-            })
 
 
         }

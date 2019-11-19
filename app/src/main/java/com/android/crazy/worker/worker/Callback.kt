@@ -28,7 +28,7 @@ interface Callback<r> {
  * Wrapper class used to write
  * the callback object as lambda
  */
-open class CallbackWrapper<r>(private val onSuccess: OnSuccess<r>?, private val onFailure: OnFailure?): Callback<r> {
+class CallbackWrapper<r>(private val onSuccess: OnSuccess<r>?, private val onFailure: OnFailure?): Callback<r> {
     override fun onComplete(result: Success<r>)= onSuccess?.invoke(result)?: Unit
     override fun onFailure(failure: Failure)= onFailure?.invoke(failure)?: Unit
 }

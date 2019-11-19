@@ -75,7 +75,7 @@ class Worker {
      * If some error occur during the work execution the failure callback
      * is called passing the error cause as parameter (if any).
      *
-     * If
+     * If the scheduling fails
      *
      * @return The work identifier
      * @Experimental
@@ -83,10 +83,6 @@ class Worker {
 
     fun <r> exec(args: Bundle, work: Work<r>, callback: Callback<r>) : WorkId {
         val workId = WorkId()
-        if (!workerScope.isActive) {
-            d("exec: worker not yet active")
-            return WorkId.NULL
-        }
         try {
             workerScope.ensureActive()
             workerScope.launch {
@@ -95,6 +91,7 @@ class Worker {
             }
         } catch (e: Throwable) {
             d("exec $e")
+            return WorkId.NULL
         }
         return workId
     }
@@ -126,17 +123,15 @@ class Worker {
     fun hasWork(workId : WorkId) : Boolean = works.contains(workId)
 
 
-    fun <r> than(workId : WorkId, args: Bundle, doWork: WorkFun<r>, onSuccess: OnSuccess<r>) {
-        d("than 111111111 $workId")
+    /*
+    fun <r1, r2> WorkId.than(args: Bundle, doWork: WorkFun<r2>, onSuccess: OnSuccess<r>) {
+        val scheduled = scheduled(this)
+        val job = scheduled?.workAsync()
         workerScope.launch {
-            val scheduled = scheduled(workId)
-            val job = scheduled?.workAsync()
             job?.await()
         }
-        d("than 222222222 $workId")
         exec(args, doWork, onSuccess)
-    }
-
+    }*/
 
     /**
      * Returns the scheduled [WorkSchedule] corresponding to the given
@@ -146,8 +141,6 @@ class Worker {
         true  -> works.getValue(workId)
         false -> null
     }
-
-    //fun hasWork(workId : WorkId) : Boolean = works.contains(workId)
 
 
     /**
@@ -167,6 +160,12 @@ class Worker {
         removeWork(workId, workStatus)
     }
 
+    /**
+     * Cancel all the previously scheduled [Work]
+     *
+     * No more works can be scheduled to this worker
+     * after this method has been called
+     */
     fun cancelAll() {
         // Cancel every work previously scheduled
         for (work in works) {
@@ -202,16 +201,9 @@ class Worker {
         } catch (e: Throwable) {
             t = e
         }
-        d("waitWork thread ${Thread.currentThread()}")
-
-        if (res != null) {
-            workerScope.launch(Dispatchers.Main) {
-                callback.onComplete(job.workId.success(res))
-            }
-        } else {
-            workerScope.launch(Dispatchers.Main) {
-                callback.onFailure(job.workId.failure(t))
-            }
+        workerScope.launch(Dispatchers.Main) {
+            if (res != null) { callback.onComplete(job.workId.success(res)) }
+            else             { callback.onFailure(job.workId.failure(t))    }
         }
         // Now that we have done remove the work from the work list
         removeWork(job.workId, job.job.status())
