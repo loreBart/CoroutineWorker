@@ -124,14 +124,22 @@ class Worker {
 
 
     /*
-    fun <r1, r2> WorkId.than(args: Bundle, doWork: WorkFun<r2>, onSuccess: OnSuccess<r>) {
+    fun <r1, r2> exec(args1: Bundle, doWork1: WorkFun<r1>, doWork2: WorkFun<r2>, onSuccess: OnSuccess<r2>) : WorkId {
+        val onSuccess1 : OnSuccess<r1> = {
+            exec(args1, WorkFunObject(doWork2), CallbackWrapper(onSuccess, null))
+        }
+        exec(args1, WorkFunObject(doWork1), CallbackWrapper(onSuccess1, null))
+    }
+
+    fun <r1, r2> WorkId.than(args: Bundle, doWork: WorkFun<r2>, onSuccess: OnSuccess<r2>) {
         val scheduled = scheduled(this)
         val job = scheduled?.workAsync()
-        workerScope.launch {
+        val ret = workerScope.launch {
             job?.await()
         }
         exec(args, doWork, onSuccess)
-    }*/
+    }
+    */
 
     /**
      * Returns the scheduled [WorkSchedule] corresponding to the given
@@ -171,11 +179,8 @@ class Worker {
         for (work in works) {
             cancel(work.key)
         }
-        try {
-            workerScope.cancel("cancelAll called")
-        } catch (e:Throwable) {
-            d("cancelAll $e")
-        }
+        try { workerScope.cancel("cancelAll called") }
+        catch (e:Throwable) { d("cancelAll $e") }
     }
     // ---------------------------------------------------------------------------------------------
 
